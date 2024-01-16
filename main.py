@@ -11,7 +11,7 @@ BUTTON_W = 120
 BUTTON_H = 60
 
 pygame.init()
-screen = pygame.display.set_mode((1280, 720))
+screen = pygame.display.set_mode((640, 360))
 
 running = True
 mouse_x = 0
@@ -59,6 +59,7 @@ def end_frame():
     is_mouse_down = False
 
 show_goodbye = False
+frames_rendered = 0
 
 while running:
     # poll for events
@@ -87,9 +88,12 @@ while running:
     if show_goodbye and button(screen, 300, 100, "Goodbye"):
         print("Goodbye")
         show_goodbye = False
-
-    print("Rendered frame")
  
+    frames_rendered += 1
+
+    frames_surf = text_surface(f"Frames Rendered: {frames_rendered}", "white", 24)
+    screen.blit(frames_surf, (2, 2))
+
     end_frame()
 
     # flip() the display to put your work on screen
