@@ -20,11 +20,9 @@ while running:
     screen.fill("black")
 
     if ui.button(screen, "Hello", center=(100, 100)):
-        print("Hello")
         show_goodbye = True
 
     if show_goodbye and ui.button(screen, "Goodbye", center=(300, 100)):
-        print("Goodbye")
         show_goodbye = False
 
     frames_rendered += 1

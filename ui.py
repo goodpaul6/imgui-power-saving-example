@@ -23,7 +23,9 @@ theme = {
             "fontSize": 24,
         }
     },
-    "components": {"button": {"width": 120, "height": 40}},
+    "components": {
+        "button": {"width": 120, "height": 40},
+    },
 }
 
 mouse_pos = (0, 0)
@@ -102,7 +104,7 @@ def button(
     if center:
         rect.center = center
     if top_left:
-        rect.top_left = top_left
+        rect.topleft = top_left
 
     colliding = rect.collidepoint(*mouse_pos)
     pressed = colliding and is_mouse_down
