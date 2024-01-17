@@ -10,18 +10,10 @@ show_goodbye = False
 frames_rendered = 0
 
 while running:
-    if ui.can_wait:
-        event = pygame.event.wait()
+    event = ui.wait_or_poll()
 
-        if event.type == pygame.QUIT:
-            running = False
-        elif event.type == pygame.MOUSEMOTION:
-            ui.mouse_pos = event.pos
-
-        if not ui.should_repaint():
-            continue
-
-    ui.is_mouse_down = any(pygame.mouse.get_pressed())
+    if event.type == pygame.QUIT:
+        running = False
 
     ui.start_frame()
 
@@ -37,8 +29,13 @@ while running:
 
     frames_rendered += 1
 
-    frames_surf = ui._text_surface(f"Frames Rendered: {frames_rendered}", "white", 24)
-    screen.blit(frames_surf, (2, 2))
+    ui.label(
+        screen,
+        f"Frames Rendered: {frames_rendered}",
+        "colors.common.white",
+        "typography.body1.fontSize",
+        top_left=(2, 2),
+    )
 
     ui.end_frame()
 

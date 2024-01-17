@@ -1,13 +1,10 @@
-from typing import Union, Tuple, Optional, Any
+from typing import Union, Tuple, Optional, Dict
 
 import pygame
 import functools
 
 Point: "TypeAlias" = Tuple[int, int]
 Color: "TypeAlias" = pygame.Color
-
-BUTTON_W = 120
-BUTTON_H = 60
 
 theme = {
     "colors": {
@@ -26,18 +23,18 @@ theme = {
             "fontSize": 24,
         }
     },
+    "components": {"button": {"width": 120, "height": 40}},
 }
 
 mouse_pos = (0, 0)
-was_mouse_down = False
+_was_mouse_down = False
 is_mouse_down = False
 
 # id: pygame.Rect
-interactive_rects = {}
+_interactive_rects: Dict[str, pygame.Rect] = {}
 
-# When an interaction occurs, we make sure to not wait for an event
-# before repainting so the interaction feels instant
-can_wait = True
+# For every interaction (e.g. button click) we want to repaint at least once
+_interactions = 0
 
 
 def theme_value(path: str) -> Union[str, int]:
@@ -59,15 +56,22 @@ def _text_surface(text: str, color: str, font_size: int) -> pygame.Surface:
     return font.render(text, False, color).convert()
 
 
+def _remove_id_portion(text: str):
+    parts = text.split("####", maxsplit=1)
+    return parts[0]
+
+
 def label(
     screen: pygame.Surface,
     text: str,
     color_path: str,
-    size_path: int,
+    size_path: str,
     top_left: Optional[Point] = None,
     center: Optional[Point] = None,
 ):
-    textsurf = _text_surface(text, theme_value(color_path), theme_value(size_path))
+    textsurf = _text_surface(
+        _remove_id_portion(text), theme_value(color_path), theme_value(size_path)
+    )
     textsurf_rect = (
         textsurf.get_rect(topleft=top_left)
         if top_left
@@ -82,8 +86,18 @@ def button(
     text: str,
     top_left: Optional[Point] = None,
     center: Optional[Point] = None,
+    width: Optional[int] = None,
+    height: Optional[int] = None,
 ):
-    rect = pygame.Rect(0, 0, BUTTON_W, BUTTON_H)
+    global _interactive_rects
+    global _interactions
+
+    if width is None:
+        width = theme_value("components.button.width")
+    if height is None:
+        height = theme_value("components.button.height")
+
+    rect = pygame.Rect(0, 0, width, height)
 
     if center:
         rect.center = center
@@ -110,34 +124,62 @@ def button(
         center=rect.center,
     )
 
-    interactive_rects[text] = rect.inflate(2, 2)
+    _interactive_rects[text] = rect
 
-    res = colliding and not is_mouse_down and was_mouse_down
+    res = colliding and not is_mouse_down and _was_mouse_down
 
     if res:
-        global can_wait
-        can_wait = False
+        _interactions += 1
 
     return res
 
 
 def start_frame():
-    global can_wait
-    global interactive_rects
+    global _interactive_rects
 
-    interactive_rects.clear()
-    can_wait = True
+    _interactive_rects.clear()
 
 
-def should_repaint():
-    return not interactive_rects or any(
-        rect.collidepoint(*mouse_pos) for rect in interactive_rects.values()
+def _should_repaint():
+    return (
+        _interactions > 0
+        or not _interactive_rects
+        or any(rect.collidepoint(*mouse_pos) for rect in _interactive_rects.values())
     )
 
 
+def wait_or_poll():
+    global mouse_pos
+    global is_mouse_down
+    global _interactions
+
+    while True:
+        if _interactions > 0:
+            event = pygame.event.poll()
+        else:
+            event = pygame.event.wait()
+
+        if event.type == pygame.MOUSEMOTION:
+            mouse_pos = event.pos
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            is_mouse_down = True
+        elif event.type == pygame.MOUSEBUTTONUP:
+            is_mouse_down = False
+            _interactions += 1
+
+        if event.type != pygame.QUIT and not _should_repaint():
+            continue
+
+        if _interactions > 0:
+            _interactions -= 1
+
+        break
+
+    return event
+
+
 def end_frame():
-    global was_mouse_down
+    global _was_mouse_down
     global is_mouse_down
 
-    was_mouse_down = is_mouse_down
-    is_mouse_down = False
+    _was_mouse_down = is_mouse_down
